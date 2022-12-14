@@ -18,6 +18,7 @@ var schema = buildSchema(`
   type Mutation {
     insert_product(id: ID!, stock: Int!): Product
     increment_product(id: ID!, quantity: Int!): Product
+    decrement_product(id: ID!, quantity: Int!): Product
     }
 `);
 
@@ -101,7 +102,30 @@ var root = {
 
     const product_data = await product_response.json();
     const stock_data = await stock_response.json();
-    console.log(stock_data);
+    return {
+      id: stock_data.id,
+      name: product_data.products[0].product_name,
+      code: product_data.products[0].code,
+      stock: stock_data.stock,
+    };
+  },
+  decrement_product: async ({ id, quantity }) => {
+    const product_api = `https://world.openfoodfacts.org/api/v2/search?fields=id,code,product_name&code=${id}`;
+    const stock_api = `http://localhost:8080/api/stock/dec/${id}`;
+
+    const product_response = await fetch(product_api);
+    const stock_response = await fetch(stock_api, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        quantity: quantity,
+      }),
+    });
+
+    const product_data = await product_response.json();
+    const stock_data = await stock_response.json();
     return {
       id: stock_data.id,
       name: product_data.products[0].product_name,

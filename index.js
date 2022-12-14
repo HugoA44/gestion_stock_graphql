@@ -14,12 +14,14 @@ var schema = buildSchema(`
   type Query {
     products: [Product]
     product_by_id(id: ID!): Product
+    product_by_name(name: String!): Product
   }
   type Mutation {
     insert_product(id: ID!, stock: Int!): Product
     increment_product(id: ID!, quantity: Int!): Product
     decrement_product(id: ID!, quantity: Int!): Product
-    }
+    delete_product(id: ID!): Product
+  }
 `);
 
 var root = {
@@ -36,7 +38,7 @@ var root = {
 
     return products_data.products.map((p) => {
       return {
-        id: p.id,
+        id: Number(p.id),
         name: p.product_name,
         code: p.code,
         stock:
@@ -54,7 +56,24 @@ var root = {
     const product_data = await product_response.json();
     const stock_data = await stock_response.json();
     return {
-      id: product_data.products[0].id,
+      id: Number(product_data.products[0].id),
+      name: product_data.products[0].product_name,
+      code: product_data.products[0].code,
+      stock: stock_data.stock || 0,
+    };
+  },
+  product_by_name: async ({ name }) => {
+    const product_api = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${name}&action=process&fields=id,code,product_name&json=1`;
+
+    const product_response = await fetch(product_api);
+    const product_data = await product_response.json();
+    const stock_api = `http://localhost:8080/api/products/${product_data.products[0].id}`;
+
+    const stock_response = await fetch(stock_api);
+
+    const stock_data = await stock_response.json();
+    return {
+      id: Number(product_data.products[0].id),
       name: product_data.products[0].product_name,
       code: product_data.products[0].code,
       stock: stock_data.stock || 0,
@@ -79,7 +98,7 @@ var root = {
     const product_data = await product_response.json();
     const stock_data = await stock_response.json();
     return {
-      id: stock_data.id,
+      id: Number(stock_data.id),
       name: product_data.products[0].product_name,
       code: product_data.products[0].code,
       stock: stock_data.stock,
@@ -103,7 +122,7 @@ var root = {
     const product_data = await product_response.json();
     const stock_data = await stock_response.json();
     return {
-      id: stock_data.id,
+      id: Number(stock_data.id),
       name: product_data.products[0].product_name,
       code: product_data.products[0].code,
       stock: stock_data.stock,
@@ -127,10 +146,29 @@ var root = {
     const product_data = await product_response.json();
     const stock_data = await stock_response.json();
     return {
-      id: stock_data.id,
+      id: Number(stock_data.id),
       name: product_data.products[0].product_name,
       code: product_data.products[0].code,
       stock: stock_data.stock,
+    };
+  },
+  delete_product: async ({ id }) => {
+    const product_api = `https://world.openfoodfacts.org/api/v2/search?fields=id,code,product_name&code=${id}`;
+    const stock_api = `http://localhost:8080/api/products/${id}`;
+
+    const product_response = await fetch(product_api);
+    const stock_response = await fetch(stock_api, {
+      method: "DELETE",
+    });
+
+    const product_data = await product_response.json();
+    const stock_data = await stock_response.json();
+
+    return {
+      id: Number(product_data.products[0].id),
+      name: product_data.products[0].product_name,
+      code: product_data.products[0].code,
+      stock: 0,
     };
   },
 };
